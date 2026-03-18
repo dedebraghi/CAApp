@@ -1,5 +1,6 @@
-const CACHE_NAME = 'caa-v1';
+const CACHE_NAME = 'caa-v2';
 const ASSETS = [
+  './',
   './index.html',
   './manifest.json',
   'https://img.icons8.com/fluency/512/communication.png'
@@ -9,7 +10,25 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      // Usiamo un approccio più robusto per non far fallire l'installazione se un asset esterno manca
+      return Promise.allSettled(
+        ASSETS.map(asset => cache.add(asset))
+      ).then(results => {
+        console.log('Cache pre-caricata con risultati:', results);
+      });
+    })
+  );
+  self.skipWaiting();
+});
+
+// Attivazione: pulizia vecchie cache
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.filter((name) => name !== CACHE_NAME)
+          .map((name) => caches.delete(name))
+      );
     })
   );
 });
@@ -22,3 +41,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+

@@ -30,7 +30,7 @@
             touch-action: manipulation; 
             user-select: none;
             -webkit-user-select: none;
-            overscroll-behavior-y: contain; /* Evita il pull-to-refresh fastidioso */
+            overscroll-behavior-y: contain;
         }
         .grid-container { 
             display: grid; 
@@ -78,6 +78,35 @@
             font-weight: 600;
         }
 
+        /* Stile del compositore di frasi */
+        .composer-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            border: 3px solid #8b5cf6;
+            border-radius: 1.5rem;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .composer-bar:focus-within {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15);
+        }
+        .composer-bar input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+            background: transparent;
+        }
+        .composer-bar input::placeholder {
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
         /* Animazione di caricamento */
         @keyframes pulse-dot {
             0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
@@ -94,6 +123,17 @@
         .loading-dot:nth-child(2) { animation-delay: 0.2s; }
         .loading-dot:nth-child(3) { animation-delay: 0.4s; }
 
+        .loading-dot-purple {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            display: inline-block;
+            margin: 0 4px;
+            animation: pulse-dot 1.2s infinite ease-in-out;
+        }
+        .loading-dot-purple:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot-purple:nth-child(3) { animation-delay: 0.4s; }
+
         /* Immagine del pittogramma nella griglia */
         .pictogram-img {
             width: 80px;
@@ -102,7 +142,7 @@
             border-radius: 0.5rem;
         }
 
-        /* Immagine del pittogramma nella striscia frase (più piccola) */
+        /* Immagine del pittogramma nella striscia frase */
         .sentence-img {
             width: 48px;
             height: 48px;
@@ -116,6 +156,58 @@
         }
         .fade-in-up {
             animation: fadeInUp 0.3s ease-out forwards;
+        }
+
+        /* Barra di progresso composizione */
+        @keyframes progressBar {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #6366f1);
+            border-radius: 999px;
+            transition: width 0.3s ease-out;
+        }
+
+        /* Pannello traduzioni */
+        .translation-card {
+            background: white;
+            border-radius: 1.5rem;
+            padding: 1rem 1.25rem;
+            border: 2px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .translation-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        /* Stile per le tab */
+        .tab-btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 1rem;
+            font-weight: 800;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+        }
+        .tab-btn:not(.active) {
+            color: #94a3b8;
+            background: white;
+            border-color: #e2e8f0;
+        }
+        .tab-btn:not(.active):hover {
+            background: #f8fafc;
+            color: #64748b;
         }
     </style>
 </head>
@@ -134,7 +226,7 @@
             });
         }
 
-        /* Componente per le icone Lucide (usato solo per i simboli predefiniti e i pulsanti) */
+        /* Componente per le icone Lucide */
         const Icon = ({ name, color }) => {
             useEffect(() => { 
                 if (window.lucide) window.lucide.createIcons(); 
@@ -144,7 +236,6 @@
 
         /* =====================================================================
            SIMBOLI PREDEFINITI (quelli originali con icone Lucide)
-           Vengono mostrati quando la barra di ricerca è vuota.
            ===================================================================== */
         const DEFAULT_SYMBOLS = [
             { id: 'stare', label: 'STARE', icon: 'arrow-down', iconColor: 'text-slate-700', color: 'border-blue-400', translations: { en: 'Stay', ar: 'بقاء' }, type: 'default' },
@@ -154,7 +245,7 @@
             { id: 'in', label: 'IN', icon: 'map-pin', iconColor: 'text-slate-500', color: 'border-slate-300', translations: { en: 'In', ar: 'في' }, type: 'default' },
             { id: 'adesso', label: 'ADESSO', icon: 'clock', iconColor: 'text-gray-700', color: 'border-red-500', translations: { en: 'Now', ar: 'الآن' }, type: 'default' },
             { id: 'dopo', label: 'DOPO', icon: 'arrow-right', iconColor: 'text-gray-700', color: 'border-green-500', translations: { en: 'After', ar: 'بعد' }, type: 'default' },
-            { id: 'casa', label: 'CASA', icon: 'home', iconColor: 'text-red-500', color: 'border-slate-400', translations: { en: 'Home', ar: 'منzel' }, type: 'default' },
+            { id: 'casa', label: 'CASA', icon: 'home', iconColor: 'text-red-500', color: 'border-slate-400', translations: { en: 'Home', ar: 'منزل' }, type: 'default' },
             { id: 'acqua', label: 'ACQUA', icon: 'droplets', iconColor: 'text-blue-500', color: 'border-red-500', translations: { en: 'Water', ar: 'ماء' }, type: 'default' },
             { id: 'dentista', label: 'DENTISTA', icon: 'stethoscope', iconColor: 'text-blue-600', color: 'border-green-500', translations: { en: 'Dentist', ar: 'طبيب الأسنان' }, type: 'default' },
             { id: 'montagna', label: 'MONTAGNA', icon: 'mountain', iconColor: 'text-teal-600', color: 'border-gray-500', translations: { en: 'Mountain', ar: 'جبل' }, type: 'default' },
@@ -165,24 +256,49 @@
         ];
 
         /* =====================================================================
-           URL helper per ottenere l'immagine di un pittogramma ARASAAC
+           URL helper per ARASAAC
            ===================================================================== */
         const getArasaacImageUrl = (pictogramId) =>
             `https://static.arasaac.org/pictograms/${pictogramId}/${pictogramId}_300.png`;
 
+        /* =====================================================================
+           Lingue supportate per la traduzione
+           ===================================================================== */
+        const LANGUAGES = [
+            { code: 'en', label: 'English', flag: '🇺🇸', speechCode: 'en-US' },
+            { code: 'ar', label: 'العربية', flag: '🇦🇪', speechCode: 'ar-SA' },
+            { code: 'fr', label: 'Français', flag: '🇫🇷', speechCode: 'fr-FR' },
+            { code: 'es', label: 'Español', flag: '🇪🇸', speechCode: 'es-ES' },
+            { code: 'de', label: 'Deutsch', flag: '🇩🇪', speechCode: 'de-DE' },
+        ];
+
         function App() {
-            const [language, setLanguage] = useState('en');
+            const [selectedLanguages, setSelectedLanguages] = useState(['en', 'ar']);
             const [sentence, setSentence] = useState([]);
             const [isSpeaking, setIsSpeaking] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [showInstallBanner, setShowInstallBanner] = useState(false);
 
-            /* ---- Stato per la ricerca ARASAAC ---- */
+            /* ---- Stato per la ricerca singola ARASAAC ---- */
             const [searchQuery, setSearchQuery] = useState('');
             const [searchResults, setSearchResults] = useState([]);
             const [isSearching, setIsSearching] = useState(false);
             const [searchError, setSearchError] = useState('');
             const searchTimerRef = useRef(null);
+
+            /* ---- Stato per il compositore di frasi ---- */
+            const [composerText, setComposerText] = useState('');
+            const [isComposing, setIsComposing] = useState(false);
+            const [composerProgress, setComposerProgress] = useState({ current: 0, total: 0 });
+            const [composerStatus, setComposerStatus] = useState('');
+
+            /* ---- Stato per le traduzioni ---- */
+            const [translations, setTranslations] = useState({});
+            const [isTranslating, setIsTranslating] = useState(false);
+            const [originalItalianText, setOriginalItalianText] = useState('');
+
+            /* ---- Modalità di visualizzazione ---- */
+            const [activeTab, setActiveTab] = useState('compose'); // 'compose' o 'search'
 
             useEffect(() => {
                 window.addEventListener('beforeinstallprompt', (e) => {
@@ -190,14 +306,10 @@
                     setDeferredPrompt(e);
                     setShowInstallBanner(true);
                 });
-
                 window.addEventListener('appinstalled', () => {
                     setShowInstallBanner(false);
                     setDeferredPrompt(null);
-                    console.log('App installata!');
                 });
-
-                // Rileva se è già in modalità standalone
                 if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
                     setShowInstallBanner(false);
                 }
@@ -207,18 +319,138 @@
                 if (!deferredPrompt) return;
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('User accepted the install prompt');
-                }
                 setDeferredPrompt(null);
                 setShowInstallBanner(false);
             };
 
             /* =================================================================
-               RICERCA ARASAAC
-               Quando l'utente digita nella barra di ricerca, aspettiamo 500 ms
-               di pausa (debounce) prima di chiamare l'API, per evitare troppe
-               richieste mentre si scrive.
+               TRADUZIONE con MyMemory API (gratuita, senza chiave)
+               Traduce il testo italiano nelle lingue selezionate.
+               ================================================================= */
+            const translateText = useCallback(async (italianText) => {
+                if (!italianText.trim()) return;
+
+                setIsTranslating(true);
+                const newTranslations = { it: italianText };
+
+                for (const langCode of selectedLanguages) {
+                    try {
+                        const response = await fetch(
+                            `https://api.mymemory.translated.net/get?q=${encodeURIComponent(italianText)}&langpair=it|${langCode}`
+                        );
+                        const data = await response.json();
+                        if (data.responseStatus === 200 && data.responseData) {
+                            newTranslations[langCode] = data.responseData.translatedText;
+                        } else {
+                            newTranslations[langCode] = '(traduzione non disponibile)';
+                        }
+                    } catch (err) {
+                        console.error(`Errore traduzione ${langCode}:`, err);
+                        newTranslations[langCode] = '(errore di traduzione)';
+                    }
+                }
+
+                setTranslations(newTranslations);
+                setIsTranslating(false);
+            }, [selectedLanguages]);
+
+            /* =================================================================
+               COMPOSITORE DI FRASI
+               Prende una frase in italiano, la divide in parole, cerca un
+               pittogramma ARASAAC per ognuna, e compone la striscia visiva.
+               ================================================================= */
+            const composeSentence = useCallback(async () => {
+                const text = composerText.trim();
+                if (!text) return;
+
+                // Dividiamo la frase in parole, rimuovendo punteggiatura
+                const words = text
+                    .replace(/[.,!?;:'"()]/g, '')
+                    .split(/\s+/)
+                    .filter(w => w.length > 0);
+
+                if (words.length === 0) return;
+
+                setIsComposing(true);
+                setComposerProgress({ current: 0, total: words.length });
+                setComposerStatus('Cerco i pittogrammi...');
+                setSentence([]);
+                setOriginalItalianText(text);
+
+                const newSentence = [];
+
+                for (let i = 0; i < words.length; i++) {
+                    const word = words[i].toLowerCase();
+                    setComposerProgress({ current: i + 1, total: words.length });
+                    setComposerStatus(`Cerco "${word}"... (${i + 1}/${words.length})`);
+
+                    try {
+                        const response = await fetch(
+                            `https://api.arasaac.org/api/pictograms/it/search/${encodeURIComponent(word)}`
+                        );
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.length > 0) {
+                                // Prendiamo il primo risultato (il più rilevante)
+                                const bestMatch = data[0];
+                                const mainKeyword = bestMatch.keywords && bestMatch.keywords.length > 0
+                                    ? bestMatch.keywords[0].keyword
+                                    : word;
+
+                                newSentence.push({
+                                    id: `composed-${bestMatch._id}-${i}`,
+                                    arasaacId: bestMatch._id,
+                                    label: word.toUpperCase(),
+                                    imageUrl: getArasaacImageUrl(bestMatch._id),
+                                    color: 'border-violet-400',
+                                    translations: { it: word, en: word, ar: word },
+                                    type: 'arasaac',
+                                });
+                            } else {
+                                // Nessun pittogramma trovato: usiamo un placeholder testuale
+                                newSentence.push({
+                                    id: `text-${i}`,
+                                    label: word.toUpperCase(),
+                                    color: 'border-slate-300',
+                                    translations: { it: word, en: word, ar: word },
+                                    type: 'text-only',
+                                });
+                            }
+                        } else {
+                            // Errore API (404 ecc.): placeholder testuale
+                            newSentence.push({
+                                id: `text-${i}`,
+                                label: word.toUpperCase(),
+                                color: 'border-slate-300',
+                                translations: { it: word, en: word, ar: word },
+                                type: 'text-only',
+                            });
+                        }
+                    } catch (err) {
+                        console.error(`Errore ricerca "${word}":`, err);
+                        newSentence.push({
+                            id: `text-${i}`,
+                            label: word.toUpperCase(),
+                            color: 'border-slate-300',
+                            translations: { it: word, en: word, ar: word },
+                            type: 'text-only',
+                        });
+                    }
+                }
+
+                setSentence(newSentence);
+                setIsComposing(false);
+                setComposerStatus('');
+                setComposerProgress({ current: 0, total: 0 });
+
+                // Avvia la traduzione della frase
+                translateText(text);
+
+            }, [composerText, translateText]);
+
+            /* =================================================================
+               RICERCA SINGOLA ARASAAC (come prima)
                ================================================================= */
             const searchArasaac = useCallback(async (query) => {
                 const trimmed = query.trim();
@@ -227,15 +459,12 @@
                     setSearchError('');
                     return;
                 }
-
                 setIsSearching(true);
                 setSearchError('');
-
                 try {
                     const response = await fetch(
                         `https://api.arasaac.org/api/pictograms/it/search/${encodeURIComponent(trimmed)}`
                     );
-
                     if (!response.ok) {
                         if (response.status === 404) {
                             setSearchResults([]);
@@ -246,33 +475,20 @@
                         setIsSearching(false);
                         return;
                     }
-
                     const data = await response.json();
-
-                    // Trasformiamo i risultati in un formato compatibile con la nostra app.
-                    // Prendiamo solo i primi 30 risultati per non appesantire la pagina.
                     const symbols = data.slice(0, 30).map((item) => {
-                        // La prima keyword è di solito la parola principale
                         const mainKeyword = item.keywords && item.keywords.length > 0
-                            ? item.keywords[0].keyword
-                            : trimmed;
-
+                            ? item.keywords[0].keyword : trimmed;
                         return {
                             id: `arasaac-${item._id}`,
                             arasaacId: item._id,
                             label: mainKeyword.toUpperCase(),
                             imageUrl: getArasaacImageUrl(item._id),
                             color: 'border-blue-400',
-                            // Per la sintesi vocale usiamo direttamente la keyword italiana
-                            translations: {
-                                en: mainKeyword,
-                                ar: mainKeyword,
-                                it: mainKeyword,
-                            },
+                            translations: { en: mainKeyword, ar: mainKeyword, it: mainKeyword },
                             type: 'arasaac',
                         };
                     });
-
                     setSearchResults(symbols);
                     if (symbols.length === 0) {
                         setSearchError('Nessun pittogramma trovato. Prova con un\'altra parola!');
@@ -286,64 +502,92 @@
                 }
             }, []);
 
-            /* Debounce: aspetta 500 ms dopo l'ultima digitazione */
             const handleSearchChange = (e) => {
                 const value = e.target.value;
                 setSearchQuery(value);
-
                 if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-
-                searchTimerRef.current = setTimeout(() => {
-                    searchArasaac(value);
-                }, 500);
+                searchTimerRef.current = setTimeout(() => { searchArasaac(value); }, 500);
             };
 
-            /* Pulisci la ricerca */
             const clearSearch = () => {
                 setSearchQuery('');
                 setSearchResults([]);
                 setSearchError('');
             };
 
-            /* Funzione per la sintesi vocale gratuita del dispositivo */
-            const speakText = (text) => {
+            /* Toggle lingua selezionata */
+            const toggleLanguage = (code) => {
+                setSelectedLanguages(prev => {
+                    if (prev.includes(code)) {
+                        if (prev.length <= 1) return prev; // almeno una lingua
+                        return prev.filter(c => c !== code);
+                    }
+                    return [...prev, code];
+                });
+            };
+
+            /* Sintesi vocale */
+            const speakText = (text, langCode = 'it') => {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                // Per i pittogrammi ARASAAC parliamo sempre in italiano
-                utterance.lang = language === 'en' ? 'en-US' : language === 'ar' ? 'ar-SA' : 'it-IT';
+                const lang = LANGUAGES.find(l => l.code === langCode);
+                utterance.lang = lang ? lang.speechCode : 'it-IT';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
             };
 
-            /* Aggiunge una parola alla striscia della frase */
+            const speakItalian = (text) => {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'it-IT';
+                utterance.rate = 0.8;
+                window.speechSynthesis.speak(utterance);
+            };
+
+            /* Aggiunge un simbolo manualmente alla striscia */
             const addToSentence = (symbol) => {
-                if (sentence.length < 10) {
-                    setSentence([...sentence, symbol]);
-                    // Per i pittogrammi ARASAAC leggiamo la keyword italiana
+                if (sentence.length < 20) {
+                    setSentence(prev => [...prev, symbol]);
                     if (symbol.type === 'arasaac') {
-                        speakText(symbol.translations.it || symbol.label);
+                        speakItalian(symbol.translations.it || symbol.label);
                     } else {
-                        speakText(symbol.translations[language]);
+                        speakItalian(symbol.label);
                     }
                 }
             };
 
-            /* Legge l'intera frase composta */
+            /* Rimuove un elemento dalla frase cliccandoci */
+            const removeFromSentence = (index) => {
+                setSentence(prev => prev.filter((_, i) => i !== index));
+            };
+
+            /* Legge l'intera frase in italiano */
             const playFullSentence = () => {
                 if (sentence.length === 0) return;
-                const fullText = sentence.map(s => {
-                    if (s.type === 'arasaac') return s.translations.it || s.label;
-                    return s.translations[language];
-                }).join(' ');
+                const fullText = originalItalianText || sentence.map(s => s.translations?.it || s.label).join(' ');
                 setIsSpeaking(true);
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(fullText);
-                utterance.lang = language === 'en' ? 'en-US' : language === 'ar' ? 'ar-SA' : 'it-IT';
+                utterance.lang = 'it-IT';
+                utterance.rate = 0.8;
                 utterance.onend = () => setIsSpeaking(false);
                 window.speechSynthesis.speak(utterance);
             };
 
-            /* Decidiamo cosa mostrare nella griglia: risultati di ricerca oppure simboli predefiniti */
+            /* Legge una traduzione specifica */
+            const playTranslation = (text, langCode) => {
+                speakText(text, langCode);
+            };
+
+            /* Pulisci tutto */
+            const clearAll = () => {
+                setSentence([]);
+                setTranslations({});
+                setOriginalItalianText('');
+                setComposerText('');
+            };
+
+            /* Griglia da mostrare */
             const isSearchActive = searchQuery.trim().length > 0;
             const displayedSymbols = isSearchActive ? searchResults : DEFAULT_SYMBOLS;
 
@@ -351,7 +595,7 @@
                 <div className="flex flex-col items-center min-h-screen pb-20">
                     {/* Banner Installazione */}
                     {showInstallBanner && (
-                        <div className="w-full bg-blue-600 text-white p-3 flex justify-between items-center shadow-md animate-in slide-in-from-top duration-500">
+                        <div className="w-full bg-blue-600 text-white p-3 flex justify-between items-center shadow-md">
                             <div className="flex items-center gap-3 ml-2">
                                 <div className="p-1 bg-white/20 rounded-lg">
                                     <Icon name="download" color="text-white w-6 h-6" />
@@ -359,45 +603,47 @@
                                 <span className="text-sm font-bold">Usa questa app senza browser!</span>
                             </div>
                             <div className="flex gap-2 mr-2">
-                                <button 
-                                    onClick={() => setShowInstallBanner(false)}
-                                    className="px-3 py-1 text-xs opacity-70 font-bold uppercase"
-                                >
-                                    Dopo
-                                </button>
-                                <button 
-                                    onClick={handleInstallClick}
-                                    className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm active:scale-95 transition-all"
-                                >
-                                    Installa Ora
-                                </button>
+                                <button onClick={() => setShowInstallBanner(false)} className="px-3 py-1 text-xs opacity-70 font-bold uppercase">Dopo</button>
+                                <button onClick={handleInstallClick} className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase shadow-sm active:scale-95 transition-all">Installa Ora</button>
                             </div>
                         </div>
                     )}
 
-                    {/* Barra Superiore per la costruzione della frase */}
+                    {/* =====================================================
+                        STRISCIA DELLA FRASE (in alto, sticky)
+                        Mostra i pittogrammi composti + pulsanti azione
+                        ===================================================== */}
                     <div className="w-full max-w-5xl bg-white border-b-4 border-slate-200 p-4 sticky top-0 z-50 shadow-sm flex items-center min-h-[140px]">
                         <div className="flex-1 flex flex-wrap gap-2 items-center min-h-[100px] overflow-y-auto px-2">
                             {sentence.length === 0 ? (
                                 <div className="flex items-center gap-3 text-slate-300">
                                     <Icon name="message-square-plus" color="text-slate-200" />
-                                    <span className="font-bold uppercase tracking-widest text-sm text-center">Tocca le immagini per parlare...</span>
+                                    <span className="font-bold uppercase tracking-widest text-sm text-center">
+                                        {activeTab === 'compose' 
+                                            ? 'Scrivi una frase e premi Componi...' 
+                                            : 'Tocca le immagini per parlare...'}
+                                    </span>
                                 </div>
                             ) : (
                                 sentence.map((s, index) => (
-                                    <div key={index} className="flex flex-col items-center p-2 bg-slate-50 border-2 border-slate-200 rounded-2xl scale-90 shadow-sm animate-in zoom-in">
-                                        {/* Se il simbolo è ARASAAC mostriamo l'immagine, altrimenti l'icona Lucide */}
+                                    <div 
+                                        key={s.id + '-' + index} 
+                                        onClick={() => removeFromSentence(index)}
+                                        className="flex flex-col items-center p-2 bg-slate-50 border-2 border-slate-200 rounded-2xl scale-90 shadow-sm cursor-pointer hover:bg-red-50 hover:border-red-200 transition-all group"
+                                        title="Clicca per rimuovere"
+                                    >
                                         {s.type === 'arasaac' ? (
-                                            <img 
-                                                src={s.imageUrl} 
-                                                alt={s.label} 
-                                                className="sentence-img"
-                                                loading="lazy"
-                                            />
+                                            <img src={s.imageUrl} alt={s.label} className="sentence-img" loading="lazy" />
+                                        ) : s.type === 'text-only' ? (
+                                            <div className="w-12 h-12 flex items-center justify-center bg-slate-200 rounded-lg">
+                                                <span className="text-lg font-black text-slate-500">{s.label.charAt(0)}</span>
+                                            </div>
                                         ) : (
                                             <Icon name={s.icon} color={s.iconColor} />
                                         )}
-                                        <span className="text-[10px] font-black uppercase mt-1 truncate w-16 text-center">{s.label}</span>
+                                        <span className="text-[10px] font-black uppercase mt-1 truncate w-16 text-center group-hover:text-red-500">
+                                            {s.label}
+                                        </span>
                                     </div>
                                 ))
                             )}
@@ -405,136 +651,286 @@
                         <div className="flex flex-col gap-3 ml-4">
                             <button 
                                 onClick={playFullSentence} 
-                                className="w-16 h-16 rounded-3xl bg-green-500 text-white shadow-lg flex items-center justify-center active:scale-90 disabled:opacity-50 transition-all"
-                                title="Leggi tutto"
+                                disabled={sentence.length === 0}
+                                className="w-16 h-16 rounded-3xl bg-green-500 text-white shadow-lg flex items-center justify-center active:scale-90 disabled:opacity-30 transition-all"
+                                title="Leggi tutto in italiano"
                             >
                                 <Icon name="volume-2" color="text-white" />
                             </button>
                             <button 
-                                onClick={() => setSentence([])} 
+                                onClick={clearAll} 
                                 className="w-16 h-12 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center active:scale-90 transition-all"
-                                title="Cancella"
+                                title="Cancella tutto"
                             >
                                 <Icon name="eraser" color="text-red-500" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Pannello di Controllo Lingua + Ricerca */}
-                    <div className="w-full max-w-5xl px-4 py-8 flex flex-col gap-8">
-                        <div className="flex justify-center">
-                            <div className="flex bg-white p-1 rounded-3xl shadow-md border border-slate-200 w-full max-w-md">
-                                <button 
-                                    onClick={() => setLanguage('en')} 
-                                    className={`flex-1 py-4 rounded-2xl font-black transition-all ${language === 'en' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                                >
-                                    ENGLISH 🇺🇸
-                                </button>
-                                <button 
-                                    onClick={() => setLanguage('ar')} 
-                                    className={`flex-1 py-4 rounded-2xl font-black transition-all ${language === 'ar' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}
-                                >
-                                    العربية 🇦🇪
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* =====================================================
-                            BARRA DI RICERCA ARASAAC
-                            Qui l'utente può digitare una parola in italiano.
-                            Dopo 500 ms di pausa l'app interroga l'API ARASAAC
-                            e mostra i pittogrammi trovati nella griglia sotto.
-                            ===================================================== */}
-                        <div className="w-full max-w-2xl mx-auto">
-                            <div className="search-bar">
-                                {/* Icona lente */}
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.3-4.3"/>
-                                </svg>
-
-                                <input
-                                    type="text"
-                                    placeholder="Cerca pittogrammi ARASAAC..."
-                                    value={searchQuery}
-                                    onChange={handleSearchChange}
-                                    autoComplete="off"
-                                    id="arasaac-search"
-                                />
-
-                                {/* Pulsante per pulire la ricerca (visibile solo se c'è testo) */}
-                                {searchQuery && (
-                                    <button 
-                                        onClick={clearSearch}
-                                        className="p-1 rounded-full hover:bg-slate-100 active:scale-90 transition-all"
-                                        title="Cancella ricerca"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-                                        </svg>
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Indicatore di stato della ricerca */}
-                            {isSearching && (
-                                <div className="flex items-center justify-center gap-2 mt-4 text-slate-400 font-bold text-sm">
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                    <span className="loading-dot"></span>
-                                    <span className="ml-2">Cerco su ARASAAC...</span>
-                                </div>
-                            )}
-
-                            {/* Messaggio di errore / nessun risultato */}
-                            {searchError && !isSearching && (
-                                <div className="mt-4 text-center text-slate-400 font-bold text-sm flex items-center justify-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+                    {/* =====================================================
+                        PANNELLO TRADUZIONI
+                        Visibile solo quando ci sono traduzioni disponibili
+                        ===================================================== */}
+                    {(Object.keys(translations).length > 0 || isTranslating) && (
+                        <div className="w-full max-w-5xl px-4 pt-6 fade-in-up">
+                            <div className="bg-gradient-to-br from-violet-50 to-blue-50 rounded-3xl p-5 border border-violet-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
                                     </svg>
-                                    {searchError}
+                                    <span className="font-black text-sm uppercase tracking-wider text-violet-700">Traduzioni</span>
+                                    {isTranslating && (
+                                        <span className="ml-2 text-xs text-violet-400 font-bold">Traduco...</span>
+                                    )}
                                 </div>
-                            )}
 
-                            {/* Etichetta che indica cosa si sta mostrando */}
-                            {isSearchActive && searchResults.length > 0 && !isSearching && (
-                                <div className="mt-4 text-center text-blue-500 font-black text-xs uppercase tracking-widest">
-                                    {searchResults.length} pittogrammi trovati per "{searchQuery.trim()}"
+                                {/* Frase originale in italiano */}
+                                {translations.it && (
+                                    <div className="translation-card mb-3 border-violet-200 bg-violet-50/50">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <span className="text-xs font-black text-violet-500 uppercase tracking-wider">🇮🇹 Italiano</span>
+                                                <p className="text-lg font-bold text-slate-800 mt-1">{translations.it}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => speakItalian(translations.it)}
+                                                className="w-10 h-10 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center active:scale-90 transition-all hover:bg-violet-200"
+                                                title="Ascolta in italiano"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Traduzioni nelle lingue selezionate */}
+                                <div className="flex flex-col gap-2">
+                                    {selectedLanguages.map(langCode => {
+                                        const lang = LANGUAGES.find(l => l.code === langCode);
+                                        const text = translations[langCode];
+                                        if (!text || !lang) return null;
+                                        return (
+                                            <div key={langCode} className="translation-card">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <span className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                                                            {lang.flag} {lang.label}
+                                                        </span>
+                                                        <p className="text-lg font-bold text-slate-800 mt-1" dir={langCode === 'ar' ? 'rtl' : 'ltr'}>
+                                                            {text}
+                                                        </p>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => playTranslation(text, langCode)}
+                                                        className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center active:scale-90 transition-all hover:bg-blue-100 flex-shrink-0"
+                                                        title={`Ascolta in ${lang.label}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* =====================================================
+                        CORPO PRINCIPALE
+                        ===================================================== */}
+                    <div className="w-full max-w-5xl px-4 py-6 flex flex-col gap-6">
+
+                        {/* Selettore lingue per la traduzione */}
+                        <div>
+                            <div className="text-center mb-3">
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Lingue di traduzione</span>
+                            </div>
+                            <div className="flex flex-wrap justify-center gap-2">
+                                {LANGUAGES.map(lang => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => toggleLanguage(lang.code)}
+                                        className={`px-4 py-3 rounded-2xl font-black text-sm transition-all active:scale-95 ${
+                                            selectedLanguages.includes(lang.code)
+                                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                                                : 'bg-white text-slate-400 border-2 border-slate-200 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        {lang.flag} {lang.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Tab: Componi Frase / Cerca Simbolo */}
+                        <div className="flex justify-center gap-2">
+                            <button 
+                                onClick={() => setActiveTab('compose')}
+                                className={`tab-btn ${activeTab === 'compose' ? 'active' : ''}`}
+                            >
+                                ✏️ Componi Frase
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('search')}
+                                className={`tab-btn ${activeTab === 'search' ? 'active' : ''}`}
+                            >
+                                🔍 Cerca Simbolo
+                            </button>
                         </div>
 
                         {/* =====================================================
-                            GRIGLIA DEI SIMBOLI
-                            Mostra i risultati ARASAAC (con immagini reali) oppure
-                            i simboli predefiniti (con icone Lucide) quando la 
-                            ricerca è vuota.
+                            TAB: COMPONI FRASE
+                            L'utente scrive una frase in italiano, il sistema
+                            trova un pittogramma per ogni parola e traduce.
                             ===================================================== */}
-                        <div className="grid-container">
-                            {displayedSymbols.map((symbol, idx) => (
-                                <button 
-                                    key={symbol.id} 
-                                    onClick={() => addToSentence(symbol)} 
-                                    className={`symbol-card fade-in-up flex flex-col items-center justify-center p-6 bg-white border-[6px] ${symbol.color} rounded-[3rem] shadow-sm hover:shadow-lg`}
-                                    style={{ animationDelay: `${idx * 30}ms` }}
-                                >
-                                    {/* ARASAAC → immagine reale, Default → icona Lucide */}
-                                    {symbol.type === 'arasaac' ? (
-                                        <img 
-                                            src={symbol.imageUrl} 
-                                            alt={symbol.label} 
-                                            className="pictogram-img"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <Icon name={symbol.icon} color={symbol.iconColor} />
+                        {activeTab === 'compose' && (
+                            <div className="w-full max-w-2xl mx-auto flex flex-col gap-4 fade-in-up">
+                                <div className="composer-bar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder="Scrivi una frase in italiano..."
+                                        value={composerText}
+                                        onChange={(e) => setComposerText(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' && !isComposing) composeSentence(); }}
+                                        autoComplete="off"
+                                        disabled={isComposing}
+                                        id="composer-input"
+                                    />
+                                    {composerText && !isComposing && (
+                                        <button 
+                                            onClick={() => setComposerText('')}
+                                            className="p-1 rounded-full hover:bg-slate-100 active:scale-90 transition-all"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                                            </svg>
+                                        </button>
                                     )}
-                                    <span className="text-sm font-black uppercase mt-4 tracking-tighter text-slate-800 leading-none">
-                                        {symbol.label}
-                                    </span>
+                                </div>
+
+                                <button
+                                    onClick={composeSentence}
+                                    disabled={!composerText.trim() || isComposing}
+                                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-blue-600 text-white font-black uppercase tracking-wider text-sm shadow-lg shadow-violet-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3"
+                                >
+                                    {isComposing ? (
+                                        <>
+                                            <span className="loading-dot-purple" style={{background: 'white'}}></span>
+                                            <span className="loading-dot-purple" style={{background: 'white'}}></span>
+                                            <span className="loading-dot-purple" style={{background: 'white'}}></span>
+                                            <span>{composerStatus}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>
+                                            </svg>
+                                            Componi e Traduci
+                                        </>
+                                    )}
                                 </button>
-                            ))}
-                        </div>
+
+                                {/* Barra progresso */}
+                                {isComposing && composerProgress.total > 0 && (
+                                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                        <div 
+                                            className="progress-fill" 
+                                            style={{ width: `${(composerProgress.current / composerProgress.total) * 100}%` }}
+                                        ></div>
+                                    </div>
+                                )}
+
+                                <p className="text-center text-xs text-slate-400 font-semibold">
+                                    Scrivi ad esempio: <em className="text-violet-400">"io voglio mangiare la pizza"</em> e premi <strong>Componi e Traduci</strong>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* =====================================================
+                            TAB: CERCA SIMBOLO (funzionalità precedente)
+                            ===================================================== */}
+                        {activeTab === 'search' && (
+                            <div className="flex flex-col gap-6 fade-in-up">
+                                <div className="w-full max-w-2xl mx-auto">
+                                    <div className="search-bar">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                                        </svg>
+                                        <input
+                                            type="text"
+                                            placeholder="Cerca pittogrammi ARASAAC..."
+                                            value={searchQuery}
+                                            onChange={handleSearchChange}
+                                            autoComplete="off"
+                                            id="arasaac-search"
+                                        />
+                                        {searchQuery && (
+                                            <button 
+                                                onClick={clearSearch}
+                                                className="p-1 rounded-full hover:bg-slate-100 active:scale-90 transition-all"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {isSearching && (
+                                        <div className="flex items-center justify-center gap-2 mt-4 text-slate-400 font-bold text-sm">
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="loading-dot"></span>
+                                            <span className="ml-2">Cerco su ARASAAC...</span>
+                                        </div>
+                                    )}
+
+                                    {searchError && !isSearching && (
+                                        <div className="mt-4 text-center text-slate-400 font-bold text-sm flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+                                            </svg>
+                                            {searchError}
+                                        </div>
+                                    )}
+
+                                    {isSearchActive && searchResults.length > 0 && !isSearching && (
+                                        <div className="mt-4 text-center text-blue-500 font-black text-xs uppercase tracking-widest">
+                                            {searchResults.length} pittogrammi trovati per "{searchQuery.trim()}"
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Griglia dei Simboli */}
+                                <div className="grid-container">
+                                    {displayedSymbols.map((symbol, idx) => (
+                                        <button 
+                                            key={symbol.id} 
+                                            onClick={() => addToSentence(symbol)} 
+                                            className={`symbol-card fade-in-up flex flex-col items-center justify-center p-6 bg-white border-[6px] ${symbol.color} rounded-[3rem] shadow-sm hover:shadow-lg`}
+                                            style={{ animationDelay: `${idx * 30}ms` }}
+                                        >
+                                            {symbol.type === 'arasaac' ? (
+                                                <img src={symbol.imageUrl} alt={symbol.label} className="pictogram-img" loading="lazy" />
+                                            ) : (
+                                                <Icon name={symbol.icon} color={symbol.iconColor} />
+                                            )}
+                                            <span className="text-sm font-black uppercase mt-4 tracking-tighter text-slate-800 leading-none">
+                                                {symbol.label}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     
                     <footer className="mt-auto py-10 text-slate-300 font-bold text-[10px] uppercase tracking-[0.3em]">

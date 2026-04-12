@@ -48,13 +48,82 @@
             transform: scale(0.92); 
             filter: brightness(0.9); 
         }
+
+        /* Stile della barra di ricerca ARASAAC */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: white;
+            border: 3px solid #cbd5e1;
+            border-radius: 1.5rem;
+            padding: 0.5rem 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .search-bar:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+        .search-bar input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+            background: transparent;
+        }
+        .search-bar input::placeholder {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        /* Animazione di caricamento */
+        @keyframes pulse-dot {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        .loading-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: #3b82f6;
+            display: inline-block;
+            margin: 0 4px;
+            animation: pulse-dot 1.2s infinite ease-in-out;
+        }
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        /* Immagine del pittogramma nella griglia */
+        .pictogram-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            border-radius: 0.5rem;
+        }
+
+        /* Immagine del pittogramma nella striscia frase (più piccola) */
+        .sentence-img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+
+        /* Animazione di apparizione per i risultati */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up {
+            animation: fadeInUp 0.3s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 overflow-x-hidden">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef, useCallback } = React;
 
         /* Registrazione Service Worker per abilitare l'installazione su Chrome */
         if ('serviceWorker' in navigator) {
@@ -65,7 +134,7 @@
             });
         }
 
-        /* Componente per le icone che si aggiorna correttamente */
+        /* Componente per le icone Lucide (usato solo per i simboli predefiniti e i pulsanti) */
         const Icon = ({ name, color }) => {
             useEffect(() => { 
                 if (window.lucide) window.lucide.createIcons(); 
@@ -73,24 +142,33 @@
             return <i data-lucide={name} className={`w-14 h-14 ${color}`}></i>;
         };
 
-        /* Definizione dei simboli CAA */
-        const SYMBOLS = [
-            { id: 'stare', label: 'STARE', icon: 'arrow-down', iconColor: 'text-slate-700', color: 'border-blue-400', translations: { en: 'Stay', ar: 'بقاء' } },
-            { id: 'aprire', label: 'APRIRE', icon: 'door-open', iconColor: 'text-amber-700', color: 'border-red-500', translations: { en: 'Open', ar: 'فتح' } },
-            { id: 'aiutami', label: 'AIUTAMI', icon: 'hand-helping', iconColor: 'text-orange-500', color: 'border-red-500', translations: { en: 'Help me', ar: 'ساعدني' } },
-            { id: 'mettere', label: 'METTERE', icon: 'box', iconColor: 'text-orange-600', color: 'border-gray-500', translations: { en: 'Put', ar: 'وضع' } },
-            { id: 'in', label: 'IN', icon: 'map-pin', iconColor: 'text-slate-500', color: 'border-slate-300', translations: { en: 'In', ar: 'في' } },
-            { id: 'adesso', label: 'ADESSO', icon: 'clock', iconColor: 'text-gray-700', color: 'border-red-500', translations: { en: 'Now', ar: 'الآن' } },
-            { id: 'dopo', label: 'DOPO', icon: 'arrow-right', iconColor: 'text-gray-700', color: 'border-green-500', translations: { en: 'After', ar: 'بعد' } },
-            { id: 'casa', label: 'CASA', icon: 'home', iconColor: 'text-red-500', color: 'border-slate-400', translations: { en: 'Home', ar: 'منزل' } },
-            { id: 'acqua', label: 'ACQUA', icon: 'droplets', iconColor: 'text-blue-500', color: 'border-red-500', translations: { en: 'Water', ar: 'ماء' } },
-            { id: 'dentista', label: 'DENTISTA', icon: 'stethoscope', iconColor: 'text-blue-600', color: 'border-green-500', translations: { en: 'Dentist', ar: 'طبيب الأسنان' } },
-            { id: 'montagna', label: 'MONTAGNA', icon: 'mountain', iconColor: 'text-teal-600', color: 'border-gray-500', translations: { en: 'Mountain', ar: 'جبل' } },
-            { id: 'mi-piace', label: 'MI PIACE', icon: 'thumbs-up', iconColor: 'text-green-500', color: 'border-gray-500', translations: { en: 'I like it', ar: 'يعجبني' } },
-            { id: 'non-mi-piace', label: 'NON MI PIACE', icon: 'thumbs-down', iconColor: 'text-red-500', color: 'border-black', translations: { en: "I don't like it", ar: 'لا يعجبني' } },
-            { id: 'non-bravo', label: 'NON BRAVO', icon: 'user-x', iconColor: 'text-red-600', color: 'border-gray-500', translations: { en: 'Not good', ar: 'ليس جيداً' } },
-            { id: 'non-toccare', label: 'NON TOCCARE', icon: 'ban', iconColor: 'text-pink-600', color: 'border-gray-500', translations: { en: "Don't touch", ar: 'لا تلمس' } },
+        /* =====================================================================
+           SIMBOLI PREDEFINITI (quelli originali con icone Lucide)
+           Vengono mostrati quando la barra di ricerca è vuota.
+           ===================================================================== */
+        const DEFAULT_SYMBOLS = [
+            { id: 'stare', label: 'STARE', icon: 'arrow-down', iconColor: 'text-slate-700', color: 'border-blue-400', translations: { en: 'Stay', ar: 'بقاء' }, type: 'default' },
+            { id: 'aprire', label: 'APRIRE', icon: 'door-open', iconColor: 'text-amber-700', color: 'border-red-500', translations: { en: 'Open', ar: 'فتح' }, type: 'default' },
+            { id: 'aiutami', label: 'AIUTAMI', icon: 'hand-helping', iconColor: 'text-orange-500', color: 'border-red-500', translations: { en: 'Help me', ar: 'ساعدني' }, type: 'default' },
+            { id: 'mettere', label: 'METTERE', icon: 'box', iconColor: 'text-orange-600', color: 'border-gray-500', translations: { en: 'Put', ar: 'وضع' }, type: 'default' },
+            { id: 'in', label: 'IN', icon: 'map-pin', iconColor: 'text-slate-500', color: 'border-slate-300', translations: { en: 'In', ar: 'في' }, type: 'default' },
+            { id: 'adesso', label: 'ADESSO', icon: 'clock', iconColor: 'text-gray-700', color: 'border-red-500', translations: { en: 'Now', ar: 'الآن' }, type: 'default' },
+            { id: 'dopo', label: 'DOPO', icon: 'arrow-right', iconColor: 'text-gray-700', color: 'border-green-500', translations: { en: 'After', ar: 'بعد' }, type: 'default' },
+            { id: 'casa', label: 'CASA', icon: 'home', iconColor: 'text-red-500', color: 'border-slate-400', translations: { en: 'Home', ar: 'منzel' }, type: 'default' },
+            { id: 'acqua', label: 'ACQUA', icon: 'droplets', iconColor: 'text-blue-500', color: 'border-red-500', translations: { en: 'Water', ar: 'ماء' }, type: 'default' },
+            { id: 'dentista', label: 'DENTISTA', icon: 'stethoscope', iconColor: 'text-blue-600', color: 'border-green-500', translations: { en: 'Dentist', ar: 'طبيب الأسنان' }, type: 'default' },
+            { id: 'montagna', label: 'MONTAGNA', icon: 'mountain', iconColor: 'text-teal-600', color: 'border-gray-500', translations: { en: 'Mountain', ar: 'جبل' }, type: 'default' },
+            { id: 'mi-piace', label: 'MI PIACE', icon: 'thumbs-up', iconColor: 'text-green-500', color: 'border-gray-500', translations: { en: 'I like it', ar: 'يعجبني' }, type: 'default' },
+            { id: 'non-mi-piace', label: 'NON MI PIACE', icon: 'thumbs-down', iconColor: 'text-red-500', color: 'border-black', translations: { en: "I don't like it", ar: 'لا يعجبني' }, type: 'default' },
+            { id: 'non-bravo', label: 'NON BRAVO', icon: 'user-x', iconColor: 'text-red-600', color: 'border-gray-500', translations: { en: 'Not good', ar: 'ليس جيداً' }, type: 'default' },
+            { id: 'non-toccare', label: 'NON TOCCARE', icon: 'ban', iconColor: 'text-pink-600', color: 'border-gray-500', translations: { en: "Don't touch", ar: 'لا تلمس' }, type: 'default' },
         ];
+
+        /* =====================================================================
+           URL helper per ottenere l'immagine di un pittogramma ARASAAC
+           ===================================================================== */
+        const getArasaacImageUrl = (pictogramId) =>
+            `https://static.arasaac.org/pictograms/${pictogramId}/${pictogramId}_300.png`;
 
         function App() {
             const [language, setLanguage] = useState('en');
@@ -98,6 +176,13 @@
             const [isSpeaking, setIsSpeaking] = useState(false);
             const [deferredPrompt, setDeferredPrompt] = useState(null);
             const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+            /* ---- Stato per la ricerca ARASAAC ---- */
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [isSearching, setIsSearching] = useState(false);
+            const [searchError, setSearchError] = useState('');
+            const searchTimerRef = useRef(null);
 
             useEffect(() => {
                 window.addEventListener('beforeinstallprompt', (e) => {
@@ -129,11 +214,103 @@
                 setShowInstallBanner(false);
             };
 
+            /* =================================================================
+               RICERCA ARASAAC
+               Quando l'utente digita nella barra di ricerca, aspettiamo 500 ms
+               di pausa (debounce) prima di chiamare l'API, per evitare troppe
+               richieste mentre si scrive.
+               ================================================================= */
+            const searchArasaac = useCallback(async (query) => {
+                const trimmed = query.trim();
+                if (!trimmed) {
+                    setSearchResults([]);
+                    setSearchError('');
+                    return;
+                }
+
+                setIsSearching(true);
+                setSearchError('');
+
+                try {
+                    const response = await fetch(
+                        `https://api.arasaac.org/api/pictograms/it/search/${encodeURIComponent(trimmed)}`
+                    );
+
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            setSearchResults([]);
+                            setSearchError('Nessun pittogramma trovato. Prova con un\'altra parola!');
+                        } else {
+                            throw new Error(`Errore API: ${response.status}`);
+                        }
+                        setIsSearching(false);
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    // Trasformiamo i risultati in un formato compatibile con la nostra app.
+                    // Prendiamo solo i primi 30 risultati per non appesantire la pagina.
+                    const symbols = data.slice(0, 30).map((item) => {
+                        // La prima keyword è di solito la parola principale
+                        const mainKeyword = item.keywords && item.keywords.length > 0
+                            ? item.keywords[0].keyword
+                            : trimmed;
+
+                        return {
+                            id: `arasaac-${item._id}`,
+                            arasaacId: item._id,
+                            label: mainKeyword.toUpperCase(),
+                            imageUrl: getArasaacImageUrl(item._id),
+                            color: 'border-blue-400',
+                            // Per la sintesi vocale usiamo direttamente la keyword italiana
+                            translations: {
+                                en: mainKeyword,
+                                ar: mainKeyword,
+                                it: mainKeyword,
+                            },
+                            type: 'arasaac',
+                        };
+                    });
+
+                    setSearchResults(symbols);
+                    if (symbols.length === 0) {
+                        setSearchError('Nessun pittogramma trovato. Prova con un\'altra parola!');
+                    }
+                } catch (err) {
+                    console.error('Errore ricerca ARASAAC:', err);
+                    setSearchError('Errore di connessione. Controlla la rete e riprova.');
+                    setSearchResults([]);
+                } finally {
+                    setIsSearching(false);
+                }
+            }, []);
+
+            /* Debounce: aspetta 500 ms dopo l'ultima digitazione */
+            const handleSearchChange = (e) => {
+                const value = e.target.value;
+                setSearchQuery(value);
+
+                if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+
+                searchTimerRef.current = setTimeout(() => {
+                    searchArasaac(value);
+                }, 500);
+            };
+
+            /* Pulisci la ricerca */
+            const clearSearch = () => {
+                setSearchQuery('');
+                setSearchResults([]);
+                setSearchError('');
+            };
+
             /* Funzione per la sintesi vocale gratuita del dispositivo */
             const speakText = (text) => {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = language === 'en' ? 'en-US' : 'ar-SA';
+                // Per i pittogrammi ARASAAC parliamo sempre in italiano
+                utterance.lang = language === 'en' ? 'en-US' : language === 'ar' ? 'ar-SA' : 'it-IT';
                 utterance.rate = 0.8;
                 window.speechSynthesis.speak(utterance);
             };
@@ -142,21 +319,33 @@
             const addToSentence = (symbol) => {
                 if (sentence.length < 10) {
                     setSentence([...sentence, symbol]);
-                    speakText(symbol.translations[language]);
+                    // Per i pittogrammi ARASAAC leggiamo la keyword italiana
+                    if (symbol.type === 'arasaac') {
+                        speakText(symbol.translations.it || symbol.label);
+                    } else {
+                        speakText(symbol.translations[language]);
+                    }
                 }
             };
 
             /* Legge l'intera frase composta */
             const playFullSentence = () => {
                 if (sentence.length === 0) return;
-                const fullText = sentence.map(s => s.translations[language]).join(' ');
+                const fullText = sentence.map(s => {
+                    if (s.type === 'arasaac') return s.translations.it || s.label;
+                    return s.translations[language];
+                }).join(' ');
                 setIsSpeaking(true);
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(fullText);
-                utterance.lang = language === 'en' ? 'en-US' : 'ar-SA';
+                utterance.lang = language === 'en' ? 'en-US' : language === 'ar' ? 'ar-SA' : 'it-IT';
                 utterance.onend = () => setIsSpeaking(false);
                 window.speechSynthesis.speak(utterance);
             };
+
+            /* Decidiamo cosa mostrare nella griglia: risultati di ricerca oppure simboli predefiniti */
+            const isSearchActive = searchQuery.trim().length > 0;
+            const displayedSymbols = isSearchActive ? searchResults : DEFAULT_SYMBOLS;
 
             return (
                 <div className="flex flex-col items-center min-h-screen pb-20">
@@ -197,7 +386,17 @@
                             ) : (
                                 sentence.map((s, index) => (
                                     <div key={index} className="flex flex-col items-center p-2 bg-slate-50 border-2 border-slate-200 rounded-2xl scale-90 shadow-sm animate-in zoom-in">
-                                        <Icon name={s.icon} color={s.iconColor} />
+                                        {/* Se il simbolo è ARASAAC mostriamo l'immagine, altrimenti l'icona Lucide */}
+                                        {s.type === 'arasaac' ? (
+                                            <img 
+                                                src={s.imageUrl} 
+                                                alt={s.label} 
+                                                className="sentence-img"
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <Icon name={s.icon} color={s.iconColor} />
+                                        )}
                                         <span className="text-[10px] font-black uppercase mt-1 truncate w-16 text-center">{s.label}</span>
                                     </div>
                                 ))
@@ -221,7 +420,7 @@
                         </div>
                     </div>
 
-                    {/* Pannello di Controllo Lingua */}
+                    {/* Pannello di Controllo Lingua + Ricerca */}
                     <div className="w-full max-w-5xl px-4 py-8 flex flex-col gap-8">
                         <div className="flex justify-center">
                             <div className="flex bg-white p-1 rounded-3xl shadow-md border border-slate-200 w-full max-w-md">
@@ -240,15 +439,96 @@
                             </div>
                         </div>
 
-                        {/* Griglia dei Simboli CAA */}
+                        {/* =====================================================
+                            BARRA DI RICERCA ARASAAC
+                            Qui l'utente può digitare una parola in italiano.
+                            Dopo 500 ms di pausa l'app interroga l'API ARASAAC
+                            e mostra i pittogrammi trovati nella griglia sotto.
+                            ===================================================== */}
+                        <div className="w-full max-w-2xl mx-auto">
+                            <div className="search-bar">
+                                {/* Icona lente */}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="m21 21-4.3-4.3"/>
+                                </svg>
+
+                                <input
+                                    type="text"
+                                    placeholder="Cerca pittogrammi ARASAAC..."
+                                    value={searchQuery}
+                                    onChange={handleSearchChange}
+                                    autoComplete="off"
+                                    id="arasaac-search"
+                                />
+
+                                {/* Pulsante per pulire la ricerca (visibile solo se c'è testo) */}
+                                {searchQuery && (
+                                    <button 
+                                        onClick={clearSearch}
+                                        className="p-1 rounded-full hover:bg-slate-100 active:scale-90 transition-all"
+                                        title="Cancella ricerca"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                                        </svg>
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Indicatore di stato della ricerca */}
+                            {isSearching && (
+                                <div className="flex items-center justify-center gap-2 mt-4 text-slate-400 font-bold text-sm">
+                                    <span className="loading-dot"></span>
+                                    <span className="loading-dot"></span>
+                                    <span className="loading-dot"></span>
+                                    <span className="ml-2">Cerco su ARASAAC...</span>
+                                </div>
+                            )}
+
+                            {/* Messaggio di errore / nessun risultato */}
+                            {searchError && !isSearching && (
+                                <div className="mt-4 text-center text-slate-400 font-bold text-sm flex items-center justify-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+                                    </svg>
+                                    {searchError}
+                                </div>
+                            )}
+
+                            {/* Etichetta che indica cosa si sta mostrando */}
+                            {isSearchActive && searchResults.length > 0 && !isSearching && (
+                                <div className="mt-4 text-center text-blue-500 font-black text-xs uppercase tracking-widest">
+                                    {searchResults.length} pittogrammi trovati per "{searchQuery.trim()}"
+                                </div>
+                            )}
+                        </div>
+
+                        {/* =====================================================
+                            GRIGLIA DEI SIMBOLI
+                            Mostra i risultati ARASAAC (con immagini reali) oppure
+                            i simboli predefiniti (con icone Lucide) quando la 
+                            ricerca è vuota.
+                            ===================================================== */}
                         <div className="grid-container">
-                            {SYMBOLS.map((symbol) => (
+                            {displayedSymbols.map((symbol, idx) => (
                                 <button 
                                     key={symbol.id} 
                                     onClick={() => addToSentence(symbol)} 
-                                    className={`symbol-card flex flex-col items-center justify-center p-6 bg-white border-[6px] ${symbol.color} rounded-[3rem] shadow-sm hover:shadow-lg`}
+                                    className={`symbol-card fade-in-up flex flex-col items-center justify-center p-6 bg-white border-[6px] ${symbol.color} rounded-[3rem] shadow-sm hover:shadow-lg`}
+                                    style={{ animationDelay: `${idx * 30}ms` }}
                                 >
-                                    <Icon name={symbol.icon} color={symbol.iconColor} />
+                                    {/* ARASAAC → immagine reale, Default → icona Lucide */}
+                                    {symbol.type === 'arasaac' ? (
+                                        <img 
+                                            src={symbol.imageUrl} 
+                                            alt={symbol.label} 
+                                            className="pictogram-img"
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <Icon name={symbol.icon} color={symbol.iconColor} />
+                                    )}
                                     <span className="text-sm font-black uppercase mt-4 tracking-tighter text-slate-800 leading-none">
                                         {symbol.label}
                                     </span>
@@ -268,4 +548,4 @@
         root.render(<App />);
     </script>
 </body>
-</html>
+</html>
